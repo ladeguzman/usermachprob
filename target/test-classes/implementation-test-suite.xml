@@ -31,13 +31,18 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
             </mock:with-attributes>
             <mock:then-return payload="#[[{'gender' :'M', 'dateRegistered' : formatDate('2012-08-20'), 'username' : 'cardo', 'fullname' : 'Cardo Dalisay','birthday' : formatDate('1998-01-18')}]]" mimeType="application/java"/>
         </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock-Write  to file">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Write to File']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[samePayload()]"/>
+        </mock:when>
         <munit:set payload="#[]" doc:name="Set Header">
             <munit:inbound-properties>
                 <munit:inbound-property key="client_id" value="j32io33ise4k2qq1"/>
             </munit:inbound-properties>
         </munit:set>
         <flow-ref name="getUserFlow" doc:name="getUserFlow"/>
-        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
         <munit:assert-on-equals expectedValue="{&quot;username&quot;:&quot;cardo&quot;,&quot;fullname&quot;:&quot;CardoDalisay&quot;,&quot;gender&quot;:&quot;male&quot;,&quot;age&quot;:21,&quot;dateRegistered&quot;:&quot;20-08-2012&quot;}" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
     </munit:test>
     <munit:test name="implementation-test-suite-userNotFoundFlowTest" description="Test" >
@@ -63,13 +68,18 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
             </mock:with-attributes>
             <mock:then-return payload="#[[{'gender' :'M', 'dateRegistered' : formatDate('2012-08-20'), 'username' : 'cardo', 'fullname' : 'Cardo Dalisay','birthday' : formatDate('1998-01-16')}]]" encoding="UTF-16" mimeType="application/java"/>
         </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock-Write to file">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Write to File']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[samePayload()]"/>
+        </mock:when>
         <munit:set payload="#[]" doc:name="Set Header">
             <munit:inbound-properties>
                 <munit:inbound-property key="client_id" value="j32io33ise4k2qq1"/>
             </munit:inbound-properties>
         </munit:set>
         <flow-ref name="getUsersFlow" doc:name="getUsersFlow"/>
-        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
         <munit:assert-on-equals expectedValue="{&quot;Users&quot;:[{&quot;username&quot;:&quot;cardo&quot;,&quot;fullname&quot;:&quot;CardoDalisay&quot;,&quot;gender&quot;:&quot;male&quot;,&quot;age&quot;:21,&quot;dateRegistered&quot;:&quot;20-08-2012&quot;}]}" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
     </munit:test>
 </mule>

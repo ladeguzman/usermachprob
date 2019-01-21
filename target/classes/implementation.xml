@@ -15,7 +15,7 @@ http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/q
 http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
     <db:mysql-config name="MySQL_Configuration1" host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" doc:name="MySQL Configuration"/>
-    <file:connector name="File" outputPattern="output.txt" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <file:connector name="File" outputPattern="${file.name}" autoDelete="true" streaming="true" validateConnections="true" doc:name="File" outputAppend="true"/>
     <file:endpoint path="src/main/resources/output" name="File1" responseTimeout="10000" doc:name="File"/>
     <smtp:gmail-connector name="Gmail" validateConnections="true" doc:name="Gmail"/>
     <sub-flow name="validateClientId">
@@ -44,7 +44,7 @@ otherwise (now.year - payload01.birthday.year),
 })]]></dw:set-payload>
                 </dw:transform-message>
                 <object-to-string-transformer doc:name="Object to String"/>
-                <file:outbound-endpoint path="src/main/resources/output"  responseTimeout="10000" doc:name="Write to File" connector-ref="File"/>
+                <file:outbound-endpoint path="${file.output.dir}"  responseTimeout="10000" doc:name="Write to File" connector-ref="File"/>
             </when>
             <otherwise>
                 <flow-ref name="userNotFoundSubFlow" doc:name="userNotFoundSubFlow"/>
@@ -77,7 +77,7 @@ otherwise (now.year - payload01.birthday.year),
 }))[0])]]></dw:set-payload>
                 </dw:transform-message>
                 <object-to-string-transformer doc:name="Object to String"/>
-                <file:outbound-endpoint path="src/main/resources/output" connector-ref="File" responseTimeout="10000" doc:name="Write to File"/>
+                <file:outbound-endpoint path="${file.output.dir}" connector-ref="File" responseTimeout="10000" doc:name="Write to File"/>
 
             </when>
             <otherwise>
@@ -90,12 +90,12 @@ otherwise (now.year - payload01.birthday.year),
         <set-property propertyName="http.status" value="404" doc:name="Set status to 404"/>
         <set-payload value="{&quot;message&quot; : &quot;User not found&quot;,    &quot;errorCode&quot; : 404 }" doc:name="Set Payload"/>
     </sub-flow>
-    <flow name="schedulerFlow" initialState="stopped">
+    <flow name="schedulerFlow" >
         <quartz:inbound-endpoint jobName="sendEmail" cronExpression="0/30 * * * * ?" repeatInterval="0" responseTimeout="10000" doc:name="Quartz">
             <quartz:event-generator-job/>
         </quartz:inbound-endpoint>
         <logger message="Job fired." level="INFO" doc:name="Logger"/>
-        <scripting:component doc:name="Groovy">
+        <scripting:component doc:name="Groovy-Read file">
             <scripting:script engine="Groovy"><![CDATA[import java.io.File
 
 String text = null;
@@ -109,17 +109,24 @@ if (fh1.exists())
 
 return text]]></scripting:script>
         </scripting:component>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
         <expression-filter expression="#[payload != null]" doc:name="Payload != null"/>
-        <set-attachment attachmentName="output.txt" value="#[payload]" contentType="text/plain" doc:name="Attachment"/>
-        <smtp:outbound-endpoint host="${email.host}" port="${email.port}" user="${email.username}" password="${email.password}" connector-ref="Gmail" to="${email.to}" from="${email.from}" subject="${email.subject}" responseTimeout="10000" doc:name="SMTP"/>
-    </flow>
-    <flow name="sendFileFlow">
-        <file:inbound-endpoint path="src/main/resources/output1"   responseTimeout="10000" doc:name="File" moveToDirectory="src/main/resources/processed"/>
-        <expression-filter expression="#[payload != null]" doc:name="payload not empty"/>
-        <object-to-string-transformer doc:name="Object to String"/>
         <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-        <smtp:outbound-endpoint host="${email.host}" port="${email.port}" user="${email.username}" password="${email.password}" to="${email.to}" from="${email.from}" subject="${email.subject}" responseTimeout="10000" doc:name="SMTP" connector-ref="Gmail"/>
-        <logger message="Email sent." level="INFO" doc:name="Logger"/>
+        <set-attachment attachmentName="output.txt" value="#[payload]" contentType="text/plain" doc:name="Attachment"/>
+        <set-payload value="#[&quot;Hi,\n\nAttached is the daily output file.&quot;]" doc:name="Set email body"/>
+        <smtp:outbound-endpoint host="${email.host}" port="${email.port}" user="${email.username}" password="${email.password}" connector-ref="Gmail" to="${email.to}" from="${email.from}" subject="${email.subject}" responseTimeout="10000" doc:name="SMTP"/>
+        <logger message="Email sent" level="INFO" doc:name="Logger"/>
+        <scripting:component doc:name="Groovy-Delete file">
+            <scripting:script engine="Groovy"><![CDATA[import java.io.File
+
+
+File fh1 = new File('src/main/resources/output/output.txt')
+if (fh1.exists())
+{
+   fh1.delete()
+}
+
+]]></scripting:script>
+        </scripting:component>
     </flow>
+
 </mule>
