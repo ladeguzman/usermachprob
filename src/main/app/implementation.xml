@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:quartz="http://www.mulesoft.org/schema/mule/quartz" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/current/mule-quartz.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+    <db:mysql-config name="MySQL_Configuration1" host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" doc:name="MySQL Configuration"/>
+    <file:connector name="File" outputPattern="output.txt" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <file:endpoint path="src/main/resources/output" name="File1" responseTimeout="10000" doc:name="File"/>
+    <smtp:gmail-connector name="Gmail" validateConnections="true" doc:name="Gmail"/>
+    <sub-flow name="validateClientId">
+        <validation:is-true exceptionClass="javax.naming.AuthenticationException" expression="#[message.inboundProperties.client_id == &quot;j32io33ise4k2qq1&quot;]" doc:name="Validation"/>
+    </sub-flow>
+    <flow name="getUsersFlow">
+        <logger message="#[&quot;Start: getUsersFlow&quot; + &quot; client_id=&quot; + message.inboundProperties.client_id]" level="INFO" doc:name="Logger"/>
+        <flow-ref name="validateClientId" doc:name="validateClientId"/>
+        <db:select config-ref="MySQL_Configuration1" doc:name="Retrieve Users">
+            <db:parameterized-query><![CDATA[select username,fullname,gender, birthday,dateRegistered from UserDetails u,Account a where u.userId = a.userId and active = 1]]></db:parameterized-query>
+        </db:select>
+        <choice doc:name="Choice">
+            <when expression="#[payload.size() &gt; 0]">
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+Users: payload map ((payload01 , indexOfPayload01) -> {	
+	username: payload01.username,
+	fullname: payload01.fullname,
+	gender: "male" when ( payload01.gender == "M") otherwise "female",
+	age:((now.year - payload01.birthday.year) - 1) when (now.month  < payload01.birthday.month)
+otherwise ((now.year - payload01.birthday.year)-1) when ((now.month == (payload01.birthday.month)) and (now.day < payload01.birthday.day))
+otherwise (now.year - payload01.birthday.year),
+	dateRegistered: payload01.dateRegistered as :date {format: "dd-MM-yyyy"}
+})]]></dw:set-payload>
+                </dw:transform-message>
+                <object-to-string-transformer doc:name="Object to String"/>
+                <file:outbound-endpoint path="src/main/resources/output"  responseTimeout="10000" doc:name="Write to File" connector-ref="File"/>
+            </when>
+            <otherwise>
+                <flow-ref name="userNotFoundSubFlow" doc:name="userNotFoundSubFlow"/>
+            </otherwise>
+        </choice>
+        <logger message="End : getUsers flow" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="getUserFlow">
+        <logger message="Start : getUser flow" level="INFO" doc:name="Logger"/>
+        <flow-ref name="validateClientId" doc:name="validateClientId"/>
+        <db:select config-ref="MySQL_Configuration1" doc:name="Retrieve user">
+            <db:parameterized-query><![CDATA[select username,fullname,gender, birthday,dateRegistered from UserDetails u,Account a where u.userId = a.userId and active = 1 and a.userId=#[message.inboundProperties.'http.uri.params'.userID]]]></db:parameterized-query>
+
+        </db:select>
+        <choice doc:name="Choice">
+            <when expression="#[payload.size() &gt; 0]">
+                <dw:transform-message doc:name="Transform Message">
+                  
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+((payload map ((payload01 , indexOfPayload01) -> {	
+	username: payload01.username,
+	fullname: payload01.fullname,
+	gender: "male" when ( payload01.gender == "M") otherwise "female",
+	age: ((now.year - payload01.birthday.year) - 1) when (now.month  < payload01.birthday.month)
+otherwise ((now.year - payload01.birthday.year)-1) when ((now.month == (payload01.birthday.month)) and (now.day < payload01.birthday.day))
+otherwise (now.year - payload01.birthday.year),
+	dateRegistered: payload01.dateRegistered as :date {format: "dd-MM-yyyy"}
+}))[0])]]></dw:set-payload>
+                </dw:transform-message>
+                <object-to-string-transformer doc:name="Object to String"/>
+                <file:outbound-endpoint path="src/main/resources/output" connector-ref="File" responseTimeout="10000" doc:name="Write to File"/>
+
+            </when>
+            <otherwise>
+                <flow-ref name="userNotFoundSubFlow" doc:name="userNotFoundSubFlow"/>
+            </otherwise>
+        </choice>
+        <logger message="End: getUser flow" level="INFO" doc:name="Logger"/>
+    </flow>
+    <sub-flow name="userNotFoundSubFlow">
+        <set-property propertyName="http.status" value="404" doc:name="Set status to 404"/>
+        <set-payload value="{&quot;message&quot; : &quot;User not found&quot;,    &quot;errorCode&quot; : 404 }" doc:name="Set Payload"/>
+    </sub-flow>
+    <flow name="schedulerFlow" initialState="stopped">
+        <quartz:inbound-endpoint jobName="sendEmail" cronExpression="0/30 * * * * ?" repeatInterval="0" responseTimeout="10000" doc:name="Quartz">
+            <quartz:event-generator-job/>
+        </quartz:inbound-endpoint>
+        <logger message="Job fired." level="INFO" doc:name="Logger"/>
+        <scripting:component doc:name="Groovy">
+            <scripting:script engine="Groovy"><![CDATA[import java.io.File
+
+String text = null;
+
+File fh1 = new File('src/main/resources/output/output.txt')
+if (fh1.exists())
+{
+   text = fh1.getText('UTF-8')
+}
+
+
+return text]]></scripting:script>
+        </scripting:component>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <expression-filter expression="#[payload != null]" doc:name="Payload != null"/>
+        <set-attachment attachmentName="output.txt" value="#[payload]" contentType="text/plain" doc:name="Attachment"/>
+        <smtp:outbound-endpoint host="${email.host}" port="${email.port}" user="${email.username}" password="${email.password}" connector-ref="Gmail" to="${email.to}" from="${email.from}" subject="${email.subject}" responseTimeout="10000" doc:name="SMTP"/>
+    </flow>
+    <flow name="sendFileFlow">
+        <file:inbound-endpoint path="src/main/resources/output1"   responseTimeout="10000" doc:name="File" moveToDirectory="src/main/resources/processed"/>
+        <expression-filter expression="#[payload != null]" doc:name="payload not empty"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <smtp:outbound-endpoint host="${email.host}" port="${email.port}" user="${email.username}" password="${email.password}" to="${email.to}" from="${email.from}" subject="${email.subject}" responseTimeout="10000" doc:name="SMTP" connector-ref="Gmail"/>
+        <logger message="Email sent." level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>

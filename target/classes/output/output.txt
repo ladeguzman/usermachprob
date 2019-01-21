@@ -1,0 +1,11 @@
+{
+  "Users": [
+    {
+      "username": "cardo",
+      "fullname": "Cardo Dalisay",
+      "gender": "male",
+      "age": 21,
+      "dateRegistered": "20-08-2012"
+    }
+  ]
+}

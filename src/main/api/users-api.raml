@@ -1,0 +1,57 @@
+#%RAML 1.0
+title: Users API
+
+types:
+  User: !include datatype/User.raml
+
+traits:
+  client-id-required:
+    headers:
+        client_id: 
+          required: true 
+          maxLength: 16
+          
+/getUsers:    
+  get:
+    headers:
+      client_id: 
+        required: true    
+    responses:
+      200:
+        body:
+          application/json:
+            type: User[]
+            example: !include examples/users.raml
+      404:
+        body:
+          application/json:
+            example: {
+              "message": "User not found.",
+              "errorCode": "404" 
+            }
+      500:
+        body:
+          application/xml:
+            example: {
+              "message":"System error",
+              "errorCode": 500
+            }
+              
+/getUser/{userID}:
+  get:
+    headers:
+      client_id: 
+        required: true
+    responses:
+      200:
+        body:
+          application/json:
+            type: User
+            example: !include examples/user.raml
+      500:
+        body:
+          application/json:
+            example: {
+              "message":"System error",
+              "errorCode": 500
+            }
