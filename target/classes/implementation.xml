@@ -94,7 +94,7 @@ otherwise (now.year - payload01.birthday.year),
         <set-payload value="{&quot;message&quot; : &quot;User not found&quot;,    &quot;errorCode&quot; : 404 }" doc:name="Set Payload"/>
     </sub-flow>
     <flow name="schedulerFlow" >
-        <quartz:inbound-endpoint jobName="sendEmail" cronExpression="0/30 * * * * ?" repeatInterval="0" responseTimeout="10000" doc:name="Quartz">
+        <quartz:inbound-endpoint jobName="sendEmail" cronExpression="${email.schedule}" repeatInterval="0" responseTimeout="10000" doc:name="Quartz">
             <quartz:event-generator-job/>
         </quartz:inbound-endpoint>
         <logger message="Job fired." level="INFO" doc:name="Logger"/>

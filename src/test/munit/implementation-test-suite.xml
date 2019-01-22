@@ -22,7 +22,7 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
         </munit:set>
         <flow-ref name="getUserFlow" doc:name="getUserFlow"/>
         <munit:assert-on-equals message="Incorrect status code" expectedValue="401" actualValue="#[message.outboundProperties.'http.status']" doc:name="Assert http.status=401"/>
-        <munit:assert-payload-equals message="Incorrect payload" expectedValue="{&quot;message&quot;:&quot;Client id is not valid.&quot;, &quot;errorCode&quot;: 401}" doc:name="Assert Payload"/>
+        <munit:assert-payload-equals message="Incorrect payload" expectedValue="{&quot;message&quot;:&quot;Client id is not valid.&quot;, &quot;errorCode&quot;: 401}" doc:name="Assert json response"/>
     </munit:test>
     <munit:test name="implementation-test-suite-getUserFlowTest" description="Test" >
         <mock:when messageProcessor=".*:.*" doc:name="Mock retrieve user">
@@ -48,7 +48,7 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
                 <mock:with-attribute name="doc:name" whereValue="#['Write to File']"/>
             </mock:with-attributes>
         </mock:verify-call>
-        <munit:assert-on-equals expectedValue="{&quot;username&quot;:&quot;cardo&quot;,&quot;fullname&quot;:&quot;CardoDalisay&quot;,&quot;gender&quot;:&quot;male&quot;,&quot;age&quot;:21,&quot;dateRegistered&quot;:&quot;20-08-2012&quot;}" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
+        <munit:assert-on-equals expectedValue="#[getResource('sample_response/getUserNormalResponseJSON.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
     </munit:test>
     <munit:test name="implementation-test-suite-userNotFoundFlowTest" description="Test" >
         <mock:when messageProcessor=".*:.*" doc:name="Mock Retrieve Users">
@@ -90,7 +90,7 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
                 <mock:with-attribute name="doc:name" whereValue="#['Write to File']"/>
             </mock:with-attributes>
         </mock:verify-call>
-        <munit:assert-on-equals expectedValue="{&quot;Users&quot;:[{&quot;username&quot;:&quot;cardo&quot;,&quot;fullname&quot;:&quot;CardoDalisay&quot;,&quot;gender&quot;:&quot;male&quot;,&quot;age&quot;:21,&quot;dateRegistered&quot;:&quot;20-08-2012&quot;}]}" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
+        <munit:assert-on-equals expectedValue="#[getResource('sample_response/getUsersNormalResponseJSON.json').asString().replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" actualValue="#[payload.replaceAll(&quot;\\s+&quot;,&quot;&quot;)]" doc:name="Assert json response"/>
     </munit:test>
     <munit:test name="implementation-test-suite-getUsersFlowSystemErrorTest" description="Test">
         <mock:throw-an exception-ref="#[new java.sql.SQLException()]" whenCalling=".*:.*" doc:name="Throw  SQLException">
@@ -105,6 +105,6 @@ http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/moc
         </munit:set>
         <flow-ref name="getUsersFlow" doc:name="Flow-ref to getUsersFlow"/>
         <munit:assert-on-equals message="Incorrect status code" expectedValue="500" actualValue="#[message.outboundProperties.'http.status']" doc:name="Assert http.status=500"/>
-        <munit:assert-payload-equals expectedValue="{&quot;message&quot;:&quot; System error&quot;, &quot;errorCode&quot;: 500 }" doc:name="Assert Payload"/>
+        <munit:assert-payload-equals message="Incorrect response" expectedValue="{&quot;message&quot;:&quot; System error&quot;, &quot;errorCode&quot;: 500 }" doc:name="Assert json response"/>
     </munit:test>
 </mule>

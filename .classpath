@@ -12,7 +12,7 @@
 	<classpathentry kind="src" output="target/test-classes" path="src/test/resources"/>
 	<classpathentry kind="src" path="src/main/wsdl"/>
 	<classpathentry kind="con" path="MUNIT_RUNTIME"/>
-	<classpathentry kind="src" output="target/test-classes" path="src/test/munit"/>
 	<classpathentry kind="con" path="MULE_LIB/DB Server/org.mule.tooling.ui.contribution.dbserver.3.4.0"/>
+	<classpathentry kind="src" output="target/test-classes" path="src/test/munit"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
