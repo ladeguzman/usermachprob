@@ -18,6 +18,10 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
     <file:connector name="File" outputPattern="${file.name}" autoDelete="true" streaming="true" validateConnections="true" doc:name="File" outputAppend="true"/>
     <file:endpoint path="src/main/resources/output" name="File1" responseTimeout="10000" doc:name="File"/>
     <smtp:gmail-connector name="Gmail" validateConnections="true" doc:name="Gmail"/>
+    <sub-flow name="writeToFileFlow">
+        <object-to-string-transformer doc:name="Object to String"/>
+        <file:outbound-endpoint path="${file.output.dir}" connector-ref="File" responseTimeout="10000" doc:name="Write to File"/>
+    </sub-flow>
     <sub-flow name="validateClientId">
         <validation:is-true exceptionClass="javax.naming.AuthenticationException" expression="#[message.inboundProperties.client_id == &quot;j32io33ise4k2qq1&quot;]" doc:name="Validation"/>
     </sub-flow>
@@ -43,8 +47,8 @@ otherwise (now.year - payload01.birthday.year),
 	dateRegistered: payload01.dateRegistered as :date {format: "dd-MM-yyyy"}
 })]]></dw:set-payload>
                 </dw:transform-message>
-                <object-to-string-transformer doc:name="Object to String"/>
-                <file:outbound-endpoint path="${file.output.dir}"  responseTimeout="10000" doc:name="Write to File" connector-ref="File"/>
+                <flow-ref name="writeToFileFlow" doc:name="writeToFileFlow"/>
+
             </when>
             <otherwise>
                 <flow-ref name="userNotFoundSubFlow" doc:name="userNotFoundSubFlow"/>
@@ -76,8 +80,7 @@ otherwise (now.year - payload01.birthday.year),
 	dateRegistered: payload01.dateRegistered as :date {format: "dd-MM-yyyy"}
 }))[0])]]></dw:set-payload>
                 </dw:transform-message>
-                <object-to-string-transformer doc:name="Object to String"/>
-                <file:outbound-endpoint path="${file.output.dir}" connector-ref="File" responseTimeout="10000" doc:name="Write to File"/>
+                <flow-ref name="writeToFileFlow" doc:name="writeToFileFlow"/>
 
             </when>
             <otherwise>
@@ -99,8 +102,9 @@ otherwise (now.year - payload01.birthday.year),
             <scripting:script engine="Groovy"><![CDATA[import java.io.File
 
 String text = null;
+String filename= '${file.output.dir}' +'${file.name}'
 
-File fh1 = new File('src/main/resources/output/output.txt')
+File fh1 = new File(filename)
 if (fh1.exists())
 {
    text = fh1.getText('UTF-8')
@@ -118,8 +122,9 @@ return text]]></scripting:script>
         <scripting:component doc:name="Groovy-Delete file">
             <scripting:script engine="Groovy"><![CDATA[import java.io.File
 
+String filename= '${file.output.dir}' +'${file.name}'
 
-File fh1 = new File('src/main/resources/output/output.txt')
+File fh1 = new File(filename)
 if (fh1.exists())
 {
    fh1.delete()
